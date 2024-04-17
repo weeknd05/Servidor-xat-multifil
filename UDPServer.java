@@ -1,7 +1,6 @@
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
@@ -14,11 +13,13 @@ public class UDPServer {
     
 
     public UDPServer(int port) throws SocketException {
+        this.port = port;
         socket = new DatagramSocket(port);
         clients = new ConcurrentHashMap<>(); // Seguro para el acceso concurrente
         System.out.println("Servidor UDP iniciado en el puerto " + port);
     }
 
+    public void start() {
     public void start() {
         running = true;
         while (running) {

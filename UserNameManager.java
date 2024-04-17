@@ -49,4 +49,14 @@ public class UserNameManager {
             }
         }
     }
+
+    public static void removeUserFile(){
+        try {
+            File fichero = new File(USER_FILE);
+            fichero.delete();
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+      
+    }
 }

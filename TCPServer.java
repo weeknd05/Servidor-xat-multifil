@@ -29,9 +29,7 @@ public class TCPServer {
     }
     
     
-    private static void closeEverything() throws IOException{
-        serverSocket.close();
-    }
+  
     
     
     

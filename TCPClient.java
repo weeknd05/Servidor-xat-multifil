@@ -25,15 +25,15 @@ public class TCPClient implements Runnable {
     public void run() {
         try {
             out.println("Hola! Para usar este chat, necesitas iniciar sesión.");
-            out.println("Para hacerlo, escriba 'LOGIN <Tu nombre de usuario>'");
+            out.println("Para hacerlo, escribe 'LOGIN <Tu nombre de usuario>'");
             String receivedMessage;
             while ((receivedMessage = in.readLine()) != null) {
                 if (!loggedIn) {
                     if (receivedMessage.startsWith("LOGIN")) {
                         loggedIn = handleLogin(receivedMessage);
-                    }
+                    } 
                     if (!loggedIn) {
-                        out.println("Necesitas iniciar sesión.(LOGIN <Tu nombre de usuario>).");
+                        out.println("Necesitas iniciar sesión. (LOGIN <Tu nombre de usuario>).");
                     }
                 } else {
                     if (receivedMessage.equals("adeu")) {
@@ -50,6 +50,7 @@ public class TCPClient implements Runnable {
             closeEverything();
         }
     }
+    
 
     public boolean handleLogin(String message) {
         String[] parts = message.split(" ", 2); // partimos el estring para recoger el nombre de usuario
@@ -80,7 +81,7 @@ public class TCPClient implements Runnable {
     private void broadcastMessage(String message) {
         List<TCPClient> clients = TCPServer.getClients();
         for (TCPClient client : clients) {
-            if (!client.equals(this)) {
+            if (!client.equals(this) && client.loggedIn) { //para que al mismo usuario no le salga su mensaje y para que el usuario no loggeado no vea los mensajes 
                 client.out.println(message);
             }
         }

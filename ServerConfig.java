@@ -1,17 +1,19 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.util.Random;
+import java.io.File;
 
-public class ServerConfig {
+public  class ServerConfig {
     private int port;
     private boolean useTCP;
     private int maxClients;
-    public ServerConfig() {
+    public ServerConfig() throws IOException {
         configure();
     }
 
-    private void configure() {
+    private void configure() throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         try {
 
@@ -38,6 +40,8 @@ public class ServerConfig {
             } while (!protocolInput.equals("1") && !protocolInput.equals("2"));
             useTCP = "1".equals(protocolInput.trim());
 
+            //guardamos la configuracion
+            saveConfig();
         } catch (IOException e) {
             System.out.println("Error al leer la configuracion: " + e.getMessage());
         }
@@ -45,6 +49,13 @@ public class ServerConfig {
 
 
     
+    public  void saveConfig() throws IOException {
+        PrintWriter writer = new PrintWriter(new File("config.txt"));
+        writer.println(this.port);
+        writer.println(this.useTCP);
+        writer.println(this.maxClients);
+        writer.close();
+    }
 
     private int randomSafePort() {
         Random random = new Random();

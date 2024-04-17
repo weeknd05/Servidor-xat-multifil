@@ -1,79 +1,103 @@
-import java.io.*;
-import java.net.*;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.util.Scanner;
 
 public class UDPClient implements Runnable {
-    private static final int SERVER_PORT = 7778; // Puerto del servidor
-    private static final String SERVER_ADDRESS = "localhost"; // Dirección del servidor
     private DatagramSocket socket;
-    private InetAddress serverIPAddress;
-    private String name; // Nombre del usuario
+    private InetAddress address;
+    private static int port;
+    private static int maxClients;
+    private String name;
 
-    public UDPClient(String name) {
-        this.name = name;
-        try {
-            this.socket = new DatagramSocket();
-            this.serverIPAddress = InetAddress.getByName(SERVER_ADDRESS);
-        } catch (IOException e) {
-            System.out.println("Error al crear el socket UDP o resolver la dirección del servidor: " + e.getMessage());
-        }
+    public UDPClient(String address, int port) throws IOException {
+        this.socket = new DatagramSocket();
+        this.address = InetAddress.getByName(address);
+        this.port = port;
     }
 
-    public void sendLoginRequest() {
-        String loginMessage = "LOGIN " + name;
-        sendMessage(loginMessage);
-    }
-
-    public void sendMessage(String message) {
-        byte[] sendData = message.getBytes();
-        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverIPAddress, SERVER_PORT);
-        try {
-            socket.send(sendPacket);
-        } catch (IOException e) {
-            System.out.println("Error al enviar el mensaje: " + e.getMessage());
-        }
-    }
-
+    @Override
     public void run() {
-        byte[] buffer = new byte[1024];
-        while (true) {
-            DatagramPacket receivePacket = new DatagramPacket(buffer, buffer.length);
-            try {
-                socket.receive(receivePacket);
-                String receivedMessage = new String(receivePacket.getData(), 0, receivePacket.getLength());
-                System.out.println(receivedMessage); // Muestra el mensaje recibido en la consola
-            } catch (IOException e) {
-                System.out.println("Error al recibir un paquete: " + e.getMessage());
-                break;
-            }
-        }
-    }
-
-    public void close() {
-        socket.close();
-        System.out.println("Conexión cerrada.");
-    }
-
-    public static void main(String[] args) {
-        System.out.println("Por favor, proporciona tu nombre de usuario como argumento.");
-
-        UDPClient client = new UDPClient(args[0]);
-        Thread thread = new Thread(client);
-        thread.start();
-        
-        // Mantén la consola interactiva para enviar mensajes
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-        System.out.println("Cliente UDP iniciado. Escribe tus mensajes (escribe 'SALIR' para terminar):");
-        client.sendLoginRequest(); // Enviar solicitud de inicio de sesión
-        
         try {
-            String line;
-            while (!(line = reader.readLine()).equalsIgnoreCase("SALIR")) {
-                client.sendMessage(client.name + ": " + line);
+            // Ciclo para iniciar sesión
+            Scanner scanner = new Scanner(System.in);
+            String input;
+
+            // solicitar al usuario que inicie sesión
+            System.out.println("Para usar este chat, necesitas iniciar sesión.");
+            while (true) {
+                System.out.print("Por favor, escribe 'LOGIN <Tu nombre de usuario>': ");
+                input = scanner.nextLine();
+                if (input.startsWith("LOGIN ")) {
+                    this.name = input.substring(6).trim(); // extraemos el nombre
+                    if (!this.name.isEmpty()) {
+                        break; // salimos si el nombre no esta vacio
+                    }
+                }
+                System.out.println("Formato incorrecto. Asegúrate de escribir 'LOGIN <Tu nombre de usuario>'.");
             }
-        } catch (IOException e) {
-            System.out.println("Error al leer de la consola: " + e.getMessage());
-        } finally {
-            client.close();
+          
+            send(this.name);
+
+            // Hilo para recibir mensajes
+            Thread receiveThread = new Thread(() -> {
+                try {
+                    while (true) {
+                        System.out.println(receive());
+                    }
+                } catch (Exception e) {
+                    System.out.println("Error al recibir mensajes: " + e.getMessage());
+                }
+            });
+            receiveThread.start();
+
+            // Ciclo para enviar mensajes
+            while (true) {
+                String message = scanner.nextLine();
+                if ("adeu".equalsIgnoreCase(message.trim())) {
+                    send("adeu");
+                    break;
+                }
+                send(name + ": " + message);
+            }
+            socket.close();
+        } catch (Exception e) {
+            System.out.println("Error en el cliente UDP: " + e.getMessage());
         }
+    }
+
+    private void send(String message) throws IOException {
+        byte[] buffer = message.getBytes();
+        DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, port);
+        socket.send(packet);
+    }
+
+    private String receive() throws IOException {
+        byte[] buffer = new byte[1024];
+        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+        socket.receive(packet);
+        return new String(packet.getData(), 0, packet.getLength());
+    }
+
+    public static void main(String[] args) throws IOException {
+        readConfig();
+        try {
+            UDPClient client = new UDPClient("localhost", port);
+            new Thread(client).start();
+        } catch (IOException e) {
+            System.out.println("No se pudo iniciar el cliente UDP: " + e.getMessage());
+        }
+    }
+
+    public static void readConfig() throws IOException {
+        BufferedReader reader = new BufferedReader(new FileReader("config.txt"));
+        UDPClient.port = Integer.parseInt(reader.readLine());
+        UDPClient.maxClients = Integer.parseInt(reader.readLine());
+        reader.close();
+        
+      
     }
 }

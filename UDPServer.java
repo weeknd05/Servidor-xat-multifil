@@ -1,80 +1,68 @@
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
 
 public class UDPServer {
     private DatagramSocket socket;
-    private Map<String, InetAddress> clientAddresses;
-    private Map<String, Integer> clientPorts;
     private boolean running;
-    private byte[] buf = new byte[1024];
-
+    private byte[] buf = new byte[1024]; // Aumentamos el tamaño del buffer para recibir datos más grandes
+    private int port;
     public UDPServer(int port) throws SocketException {
+        this.port = port;
         socket = new DatagramSocket(port);
-        clientAddresses = new HashMap<>();
-        clientPorts = new HashMap<>();
     }
 
-    public void run() {
+    public void start() {
         running = true;
-        System.out.println("Server is running on UDP port " + socket.getLocalPort());
-
-        while (running) {
-            DatagramPacket packet = new DatagramPacket(buf, buf.length);
-            try {
-                socket.receive(packet);
-                InetAddress address = packet.getAddress();
-                int port = packet.getPort();
-                String received = new String(packet.getData(), 0, packet.getLength());
-
-                if (received.startsWith("LOGIN ")) {
-                    String userName = received.substring(6);
-                    if (!clientAddresses.containsKey(userName)) {
-                        clientAddresses.put(userName, address);
-                        clientPorts.put(userName, port);
-                        System.out.println("User " + userName + " logged in.");
-                    }
-                } else if (received.startsWith("LOGOUT ")) {
-                    String userName = received.substring(7);
-                    clientAddresses.remove(userName);
-                    clientPorts.remove(userName);
-                    System.out.println("User " + userName + " logged out.");
-                } else {
-                    broadcastMessage(received, address, port);
+        System.out.println("Servidor UDP INICIADO");
+        Thread serverThread = new Thread(() -> {
+            while (running) {
+                DatagramPacket packet = new DatagramPacket(buf, buf.length);
+                try {
+                    socket.receive(packet);
+                    handlePacket(packet);
+                } catch (IOException e) {
+                    System.out.println("Error al recibir el paquete: " + e.getMessage());
                 }
-            } catch (IOException e) {
-                System.out.println("IOException: " + e.getMessage());
-                running = false;
             }
-        }
-        socket.close();
+            socket.close();
+        });
+        serverThread.start();
     }
 
-    private void broadcastMessage(String message, InetAddress senderAddr, int senderPort) {
-        for (Map.Entry<String, InetAddress> entry : clientAddresses.entrySet()) {
-            if (!entry.getValue().equals(senderAddr) || !clientPorts.get(entry.getKey()).equals(senderPort)) {
+    private void handlePacket(DatagramPacket packet) {
+        String received = new String(packet.getData(), 0, packet.getLength());
+        if ("adeu".equals(received.trim())) {
+            return;
+        }
+
+        System.out.println("Received from " + packet.getAddress() + ": " + received);
+        broadcastMessage(received, packet.getAddress());
+    }
+
+    private void broadcastMessage(String message, InetAddress senderAddress) {
+        clientPorts.forEach((address, port) -> {
+            if (!address.equals(senderAddress)) {
+                byte[] buffer = message.getBytes();
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, port);
                 try {
-                    DatagramPacket packet = new DatagramPacket(message.getBytes(), message.getBytes().length,
-                                                               entry.getValue(), clientPorts.get(entry.getKey()));
                     socket.send(packet);
                 } catch (IOException e) {
-                    System.out.println("Error sending message: " + e.getMessage());
+                    System.out.println("Error al enviar el mensaje a " + address + ": " + e.getMessage());
                 }
             }
-        }
+        });
     }
 
-    public static void main(String[] args) {
-        int port = 7778; // Default port
-        try {
-            UDPServer server = new UDPServer(port);
-            server.run();
-        } catch (SocketException e) {
-            System.out.println("SocketException: " + e.getMessage());
-        }
+    public void stop() {
+        running = false;
+        socket.close();
+    }
+    public static int getPort(){
+        return this.port;
     }
 }

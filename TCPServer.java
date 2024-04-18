@@ -28,11 +28,6 @@ public class TCPServer {
         
     }
     
-    
-  
-    
-    
-    
     //getters y setters
     public static List<TCPClient> getClients() {
         return clients;

@@ -12,7 +12,7 @@ public class Main {
     private static ScheduledFuture<?> shutdownTask;
     private static boolean wasEmpty = true; // variable para ver si la lista estaba  vacia
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         ServerConfig config = new ServerConfig();
         shutdownHook();
         if (config.isUseTCP()) {
@@ -22,7 +22,9 @@ public class Main {
             } catch (IOException e) {
                 System.out.println("Error al iniciar el servidor TCP: " + e.getMessage());
             }
+            //si no es tcp, sera UDP
         }else {
+           // scheduleServerShutdown(UDPServer.getClients());
             try {
                 UDPServer udpServer = new UDPServer(config.getPort());
                 udpServer.start();
@@ -61,7 +63,7 @@ public class Main {
                         }
                     }, 30, TimeUnit.SECONDS);
                 }
-            } else if (!isEmpty && wasEmpty) { //si no esta vacia y estuvo vacia, entra
+            } else if (!isEmpty && wasEmpty) { //si no esta vacia pero estuvo vacia, entra
                 if (shutdownTask != null) {
                     shutdownTask.cancel(false);
                     System.out.println("Usuarios activos detectados, cancelando cierre programado.");

@@ -16,7 +16,7 @@ public  class ServerConfig {
     private void configure() throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         try {
-
+            deleteConfig();
             System.out.println("Introduce el número máximo de clientes:");
             String clients = reader.readLine();
             maxClients = Integer.parseInt(clients);
@@ -52,11 +52,19 @@ public  class ServerConfig {
     public  void saveConfig() throws IOException {
         PrintWriter writer = new PrintWriter(new File("config.txt"));
         writer.println(this.port);
-        writer.println(this.useTCP);
         writer.println(this.maxClients);
+        writer.println(this.useTCP);
         writer.close();
     }
 
+    private void deleteConfig(){
+        try {
+            File fichero = new File("config.txt");
+            fichero.delete();
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
     private int randomSafePort() {
         Random random = new Random();
         return random.nextInt(49151 - 1024 + 1) + 1024;

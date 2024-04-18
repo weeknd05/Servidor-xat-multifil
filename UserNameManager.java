@@ -22,7 +22,7 @@ public class UserNameManager {
                 users.add(line.trim());
             }
         } catch (IOException e) {
-            System.out.println("Error al leer el archivo de usuarios: " + e.getMessage());
+           // System.out.println("Error al leer el archivo de usuarios: " + e.getMessage());
         }
         return users;
     }
@@ -59,4 +59,6 @@ public class UserNameManager {
         }
       
     }
+
+    
 }

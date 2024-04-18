@@ -1,4 +1,5 @@
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -12,29 +13,62 @@ import java.util.Set;
 
 public class UDPClient implements Runnable {
     private static DatagramSocket socket;
-    private InetAddress address;
+    private static InetAddress address;
     private static int port;
     private static int maxClients;
     private static String name;
+    private static boolean logged;
     static Scanner scanner = new Scanner(System.in);
     
     public UDPClient(String address, int port) throws IOException {
         this.socket = new DatagramSocket();
         this.address = InetAddress.getByName(address);
         this.port = port;
+        
     }
     
     //hilo para recivir mensajes
     Thread receiveThread = new Thread(() -> {
         try {
-            while (true) {
+            while (true && logged) {
+                
                 System.out.println(receive());
             }
         }catch(SocketException ex) {
             System.out.println("Se ha desconectado del chat 2");
             
-        }catch (Exception e) {
-            System.out.println("Error al recibir mensajes: " + e.getMessage() + e.getStackTrace());
+        }catch(SocketTimeoutException exe){
+            System.out.println("Socket tineout exeception: " + exe);
+        }
+        catch (Exception e) {
+            System.out.println("Error al recibir mensajes en el receive thread: " + e.getMessage() + e.getStackTrace());
+        }
+    });
+    
+    
+    Thread keepAliveThread = new Thread(()->{
+        while (true) {
+            try {
+                send("Estas?");
+                socket.setSoTimeout(5000); 
+                String response = receive();
+                socket.setSoTimeout(0);
+                if (!"si".equals(response)) {
+                    System.out.println("El servidor no responde. Verificando de nuevo en 60 segundos.");
+                    Thread.sleep(60000); 
+                } else {
+                    System.out.println("El servidor esta activo.");
+                    Thread.sleep(60000); 
+                }
+            }catch (SocketTimeoutException timeout) {
+                System.out.println( timeout+" en el keep alive");
+            }
+            catch (InterruptedException e) {
+                System.out.println("Keep-alive interrumpido: " + e.getMessage());
+                break;
+            } catch (IOException e) {
+                System.out.println("Problemas de conexion durante el keep-alive: " + e.getMessage());
+            }
         }
     });
     
@@ -46,7 +80,7 @@ public class UDPClient implements Runnable {
                 if(isCapacity()){
                     send(login());
                     receiveThread.start();
-                    
+                    // keepAliveThread.start();
                     // ciclo para enviar mensajes
                     while (true) {
                         String message = scanner.nextLine();
@@ -63,12 +97,10 @@ public class UDPClient implements Runnable {
                     System.exit(0);
                 }
             }else {
-                //System.out.println("El servidor esta apagadou"); depurar
+                System.out.println("El servidor esta apagado, intentalo mas tarde");
                 socket.close();
                 System.exit(0);
             }
-            
-            
             socket.close();
         } catch(SocketException ex){
             if(ex.getMessage().equals("Socket closed")){
@@ -84,45 +116,19 @@ public class UDPClient implements Runnable {
     }
     
     /*
-     * Funcion que envia mensajes y llama a otra que  verifica su recepcion
-     */
-    private void send(String message) throws IOException {
+    * Funcion que envia mensajes y llama a otra que  verifica su recepcion
+    */
+    private static void send(String message) throws IOException, InterruptedException {
+        
         byte[] buffer = message.getBytes();
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, port);
         socket.send(packet);
-        isMessageReceived();
-       
-    }
-
-    /**
-     * Funcion que mira si un mensaje se ha recibido, para comprobar durante la conexion
-     * ya que si el servidor se cierra y el usuario sigue en el, no sabra que se ha cerrado la conexion
-     * @return
-     */
-    private boolean isMessageReceived() {
-        try {
-            socket.setSoTimeout(5000); // esperamos 5 sec
-            System.out.println("Esperando respuesta del servidor...");
-            String response = receive(); // si hay respuesta
-            System.out.println("Respuesta recibida: " + response);
-            socket.setSoTimeout(0); // desactivamos el set timeout
-            return "recibido".equals(response.trim()); // verifica la respuesta esperada
-        } catch (SocketTimeoutException timeout) {
-            System.out.println("Desafortunadamente se ha perdido la conexión con el servidor x_x");
-            return false; // devuelve falso si hay timeout
-        } catch (IOException e) {
-            System.out.println("Error al comprobar si el servidor está activo: " + e.getMessage());
-            return false; // devuelve falso si hay una excepción de I/O
-        } finally {
-            try {
-                socket.setSoTimeout(0); // restablece el timeout para evitar efectos secundarios
-            } catch (SocketException e) {
-                System.out.println("No se pudo restablecer el timeout del socket: " + e.getMessage());
-            }
-        }
+        
     }
     
-    private String receive() throws IOException {
+    
+    
+    private static String receive() throws IOException {
         byte[] buffer = new byte[1024];
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
         socket.receive(packet);
@@ -130,7 +136,12 @@ public class UDPClient implements Runnable {
     }
     
     public static void main(String[] args) throws IOException {
-        readConfig();
+        try {
+            readConfig();
+        } catch (FileNotFoundException e) {
+            System.out.println("Hay un error en la configuracion..Puede ser que el servidor no este iniciado");
+            System.exit(0);
+        }
         try {
             UDPClient client = new UDPClient("localhost", port);
             System.out.println("Iniciando conexion en el puerto:" + port + " \nEspere..");
@@ -149,10 +160,18 @@ public class UDPClient implements Runnable {
         
     }
     
-    public static boolean isCapacity(){
-        return maxClients >= UDPServer.getClients().size() || UDPServer.getClients().isEmpty() || UDPServer.getClients() == null;
+    public static boolean isCapacity() throws IOException, InterruptedException{
+        
+        System.out.println("Clientes activos ahora mismo: " + requestClientCount());
+        return maxClients >= requestClientCount();
     }
     
+    // Método para solicitar la cantidad de clientes
+    public static int requestClientCount() throws IOException, InterruptedException {
+        send("GET_CLIENT_COUNT");
+        String response = receive();
+        return Integer.parseInt(response);
+    }
     
     /**
     * funcion para solicitar al usuario que inicie sesion
@@ -168,6 +187,7 @@ public class UDPClient implements Runnable {
                 name = input.substring(6).trim(); // extraemos el nombre
                 if (!name.isEmpty() && !isUserNameTaken(name)) {
                     System.out.println("Sesion iniciada con exito");
+                    logged = true;
                     break; // salimos si el nombre no esta vacio
                 }
             }else if(input.toLowerCase().startsWith("adeu")){
@@ -180,7 +200,7 @@ public class UDPClient implements Runnable {
         }
         return input;
     }
-
+    
     public static boolean isUserNameTaken(String name){
         Set <String> currentUsers = UserNameManager.loadUsers();
         while(currentUsers.contains(name)) {
@@ -191,40 +211,22 @@ public class UDPClient implements Runnable {
         return false;
         
     }
-
+    
     public static void logout(){
         UserNameManager.removeUser(name);
         socket.close();
         System.exit(0);
     }
     
-    // public boolean handleLogin(String message) {
-    //     String[] parts = message.split(" ", 2); // partimos el estring para recoger el nombre de usuario
-    //     if (parts.length > 1 && parts[1] != null && !parts[1].trim().isEmpty()) {
-    //         String proposedName = parts[1].trim();
-    //         Set<String> currentUsers = UserNameManager.loadUsers();
-    //         if (currentUsers.contains(proposedName)) {//si el nombre esta en el fichero, el usuario tendra que escoger otro
-    //             out.println("Este nombre de usuario ya está en uso. Por favor, elija otro.");
-    //             return false;
-    //         }
-    //         clientName = proposedName;
-    //         UserNameManager.addUser(clientName);
-    //         out.println("Hola " + clientName + ", ahora mismo hay " + (TCPServer.getClients().size() - 1) + " usuarios en linea. Escribe 'adeu' para desconectarte.");
-    //         broadcastMessage("El cliente " + clientName + " se ha conectado al chat!");
-    //         return true;
-    //     } else {
-    //         out.println("Login no válido, escriba 'LOGIN <Tu nombre de usuario>'.");
-    //         return false;
-    //     }
-    // }
-
+    
     
     /**
     * Metodo que mediante un ping verifica que el servidor esta inciado
     * @return
-     * @throws IOException 
+    * @throws IOException 
+    * @throws InterruptedException 
     **/
-    private boolean isServerAlive() throws IOException {
+    private boolean isServerAlive() throws IOException, InterruptedException {
         String message = "Estas?";
         byte[] buffer = message.getBytes();
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, port);
@@ -235,7 +237,6 @@ public class UDPClient implements Runnable {
             socket.setSoTimeout(0); //desactivamos el set timeout
             return "si".equals(response);
         } catch (SocketTimeoutException e) {
-            System.out.println("El servidor esta apagado, intentalo mas tarde");
             return false; // el server no responde
         } catch (IOException e) {
             System.out.println("Error al comprobar si el servidor esta activo: " + e.getMessage());

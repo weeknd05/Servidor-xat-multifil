@@ -37,10 +37,14 @@ public class UDPServer {
         InetAddress address = packet.getAddress();
         int port = packet.getPort();
 
+        if (message.equals("GET_CLIENT_COUNT")) {
+            String response = ""+clients.size();
+            sendMessage(response, packet.getAddress(), packet.getPort());
+        }
+
         if ("Estas?".equals(message)) {
             sendMessage("si", packet.getAddress(), packet.getPort());
         }
-        sendMessage("recibido", packet.getAddress(), packet.getPort());
 
         if (message.startsWith("LOGIN ")) {
             String clientName = message.substring(6).trim();

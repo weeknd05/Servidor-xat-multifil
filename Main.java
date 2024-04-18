@@ -13,6 +13,7 @@ public class Main {
     private static boolean wasEmpty = true; // variable para ver si la lista estaba  vacia
 
     public static void main(String[] args) throws IOException {
+        UserNameManager.removeUserFile(); //BORRAMOS LOS USUARIOS CUANDO SE INICIA EL SERVIDOR, POR SI NO SE HAN BORRADO EN EL SHUTDOWN HOOK
         ServerConfig config = new ServerConfig();
         shutdownHook();
         if (config.isUseTCP()) {

@@ -16,7 +16,7 @@ public  class ServerConfig {
     private void configure() throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         try {
-            deleteConfig();
+            deleteConfig(); //borramos la configuración previa
             System.out.println("Introduce el número máximo de clientes:");
             String clients = reader.readLine();
             maxClients = Integer.parseInt(clients);

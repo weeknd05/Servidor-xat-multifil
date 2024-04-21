@@ -1,7 +1,6 @@
 import java.io.*;
 import java.net.*;
 import java.util.*;
-import java.util.Objects;
 
 public class TCPServer {
     private static List<TCPClient> clients = new ArrayList<>();

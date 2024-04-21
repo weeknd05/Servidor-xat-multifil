@@ -10,7 +10,6 @@ Actividad evaluable M9 - Adrian Memecica
     Para conectarte al TCP, abre un terminal y haz lo siguiente `` telnet [localhost] [port]``
 - ##### Para UDP
     Simplemente ejecuta la clase UDPClient
-Esta actividad esta compuesta por varias clases, a continuación voy a explicar que hace cada una.
 
 ## Clases
 Esta actividad esta compuesta por varias clases, a continuación voy a explicar que hace cada una.
@@ -51,9 +50,9 @@ Esta actividad esta compuesta por varias clases, a continuación voy a explicar 
     Gestiona los mensajes y el login, envia un mensaje de confirmación al principio para ver si el servidor esta activo
 
 ## Aspectos a mejorar
-    Debido a la falta del tiempo y a que se ha complicado mas de lo que me esperaba, no he podido implementar algunas cosas
-    Quieria intentar implementar una solución para la confirmación de la recepción de los paquetes para UDP (Keep Alive o similar) pero no he podido
-    Tampoco tendria sentido hacerlo, ya que es posible que no todos los paquetes lleguen, si no es en local, y esa confirmación fallaria. 
+Debido a la falta del tiempo y a que se ha complicado mas de lo que me esperaba, no he podido implementar algunas cosas
+Quieria intentar implementar una solución para la confirmación de la recepción de los paquetes para UDP (Keep Alive o similar) pero no he podido
+Tampoco tendria sentido hacerlo, ya que es posible que no todos los paquetes lleguen, si no es en local, y esa confirmación fallaria. 
 
 -   Falta manejo de excepciones en el menu de configuración
 
